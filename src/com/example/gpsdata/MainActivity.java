@@ -25,26 +25,31 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity implements GpsStatus.Listener, LocationListener{
 
-	public static String experimentId = "X1";
+	public static String experimentId = "Test";
 	public static Boolean status = false;
 	public static long StartTime = 0;
 	
 	private Button start,end;
 	private LinearLayout linearLayout;
-	
+	private Toast toast;
 	private TextView show, tp;
 	private LocationManager locMgr;
 	public static Location seedLocation;
@@ -55,7 +60,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	//private float elevation;
 	//private int prn;
 	//private float snr;
-		
+	
 	private LocEntry currentLocEntry;
 	private SatEntry currentSatEntry;
 	private List<SatEntry> satList;
@@ -76,7 +81,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		start.setOnClickListener(new StartListener());
 		end.setOnClickListener(new EndListener());
 
-		db = new DBHandler(this);	//an instance of database handler
+		//db = new DBHandler(this);
 		
 		
         locMgr = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -112,6 +117,11 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		//locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, this);
 
 	    Log.i("dbpath", new ContextWrapper(this).getDatabasePath("gpsexp.sqlite").getAbsolutePath());
+	    //File ofile = new File(Environment.getExternalStorageDirectory().getPath().concat("//gpsexp.sqlite"));
+	    //boolean deleted = ofile.delete();
+    	//Log.i("db", ofile.getPath() );
+    	toast = Toast.makeText(getApplicationContext(), "true" ,Toast.LENGTH_SHORT);
+    	//if (deleted) toast.show();
 	
 	}
 	
@@ -122,7 +132,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
           
             try {
             	if(db != null && status)
-            		db.addSatEntry(experimentId, satList);
+            		db.addSatEntry(satList);
             	
             } catch (Exception e) {
               e.printStackTrace();
@@ -142,7 +152,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
           
             try {
             	if(db != null && status)
-            		db.addLocEntry(experimentId, currentLocEntry);
+            		db.addLocEntry(currentLocEntry);
             	
             } catch (Exception e) {
               e.printStackTrace();
@@ -162,8 +172,8 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
           
             try {
             	if(db != null && status){
-            		db.addSatEntry(experimentId, satList);
-            		db.addLocEntry(experimentId, currentLocEntry);
+            		db.addSatEntry(satList);
+            		db.addLocEntry(currentLocEntry);
             	}           	
             } catch (Exception e) {
               e.printStackTrace();
@@ -178,8 +188,13 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
                 File data = Environment.getDataDirectory();
 
                 if (sd.canWrite()) {
-                    String currentDBPath = "//data//com.example.gpsdata//databases//gpsexp.sqlite";
-                    String backupDBPath = "gpsexp.sqlite";
+                	
+                	String currentDBPath = "/data/com.example.gpsdata/databases/gpsdata.sqlite";
+                    String backupDBPath = "gpsdata.sqlite";
+                	File ofile = new File(sd.getPath().concat("/").concat(backupDBPath));
+                	boolean deleted = ofile.delete();
+                	Log.i("db", ofile.getPath() );
+                    
                     File currentDB = new File(data, currentDBPath);
                     File backupDB = new File(sd, backupDBPath);
 
@@ -189,6 +204,9 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
                         dst.transferFrom(src, 0, src.size());
                         src.close();
                         dst.close();
+                        
+                        toast.setText("data export");
+      		    	  	toast.show();
                     }
                 }
             } catch (Exception e) {
@@ -219,6 +237,8 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	    	
 		super.onDestroy();
 	}
+
+/***************Menu setup****************/
 	 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -227,16 +247,55 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		return true;
 	}
 	
+	@Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        
+    	switch (item.getItemId()) {
+        case R.id.menu_settings:
+        	final EditText txtExp = new EditText(this);
+
+        	// Set the default text to a link of the Queen
+        	txtExp.setHint(experimentId);
+
+        	new AlertDialog.Builder(this)
+        	  .setTitle("Experiment setting")
+        	  .setMessage("Please input experiment ID:")
+        	  .setView(txtExp)
+        	  .setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
+        	    public void onClick(DialogInterface dialog, int whichButton) {
+        	    	experimentId = txtExp.getText().toString();
+        	    	//db = new DBHandler(MainActivity.this);
+        	    }
+        	  })
+        	  .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+        	    public void onClick(DialogInterface dialog, int whichButton) {
+        	    }
+        	  })
+        	  .show();
+        	break;
+        default:
+        	return super.onOptionsItemSelected(item);
+    	}
+    	Log.i("menu", experimentId);
+    	return true;
+    }
+	
+/***************Button listeners****************/	
+	
 	class StartListener implements OnClickListener {
 		  public void onClick(View v) {
 			  //linearLayout.removeViews (0, linearLayout.getChildCount());
 			  //scenario = (EditText) findViewById(R.id.name);
 			  //locMgr.addGpsStatusListener(MainActivity.this); 
 		      status = true;
-		      
+		      db = new DBHandler(MainActivity.this);
+		      if(db!=null){
+		    	  toast.setText("data collection");
+		    	  toast.show();
+		      }
 		      //locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, MainActivity.this);
 		  }
-		}
+	}
 	
 	class EndListener implements OnClickListener {
 		  public void onClick(View v) {
@@ -248,9 +307,9 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	          addEntrysTask.execute((Object[]) null);
 	          
 		  }
-		}
+	}
 
-	
+/***************onGpsStatusChanged****************/	
 	@Override
 	public void onGpsStatusChanged(int event) {
 		// TODO Auto-generated method stub
@@ -276,12 +335,13 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
               linearLayout.addView(tv);
              }
             show.setText("There are " + count + " satellites:");
-            
+            Log.i("menu", experimentId);
             AddSatEntryTask addSatEntryTask = new AddSatEntryTask();
             addSatEntryTask.execute((Object[]) null);
 		}
 	}
 	
+/***************onLocationChanged****************/	
 	@Override
 	public void onLocationChanged(Location location) {
 		// TODO Auto-generated method stub

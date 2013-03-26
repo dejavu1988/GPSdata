@@ -1,6 +1,5 @@
 package com.example.gpsdata;
 
-import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 
@@ -21,9 +20,10 @@ import android.util.Log;
 
 public class DBHandler extends SQLiteOpenHelper {
 
-	private static final String DATABASE_NAME = "gpsexp.sqlite";  
+	private static final String DATABASE_NAME = "gpsdata.sqlite"; 
+	private static final String DATABASE_PATH = "/data/data/com.example.gpsdata/databases/";
     private static final int DATABASE_VERSION = 1;  
-    private static final String TABLE_NAME = MainActivity.experimentId;  
+    private static String TABLE_NAME;  
     public static final String KEY_ID = "id";  
     //public static final String KEY_EXPID = "expid"; 
     public static final String KEY_PRN = "prn";  
@@ -44,6 +44,7 @@ public class DBHandler extends SQLiteOpenHelper {
 	@Override
 	public void onCreate(SQLiteDatabase db) {
 		// TODO Auto-generated method stub
+		TABLE_NAME = MainActivity.experimentId;
 		String sql1 = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME.concat("_SAT") + " (" + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
 				+ KEY_PRN + " INTEGER, " + KEY_AZIMUTH + " REAL, "
 				+ KEY_ELEVATION + " INTEGER , "+  KEY_SNR +" REAL, " + KEY_TIME + " INTEGER);";  
@@ -70,7 +71,7 @@ public class DBHandler extends SQLiteOpenHelper {
 	}
 
 	// insert a SatEntry with full info
-	public void addSatEntry(String expid, List<SatEntry> sList) {  
+	public void addSatEntry(List<SatEntry> sList) {  
 		SQLiteDatabase db = this.getWritableDatabase(); 
 		/* ContentValues */  
 		ContentValues cv = new ContentValues();
@@ -89,7 +90,7 @@ public class DBHandler extends SQLiteOpenHelper {
 	}  
 	
 	// insert a LocEntry with full info
-	public long addLocEntry(String expid, LocEntry l) {  
+	public long addLocEntry(LocEntry l) {  
 		SQLiteDatabase db = this.getWritableDatabase();  
 		/* ContentValues */  
 		ContentValues cv = new ContentValues();  

@@ -18,5 +18,5 @@ and exported to '/sdcard/'.
 on the screen.
 3. Press 'Start' button to start database deamon, and press 'End'
 to terminate data storage.
-4. Access 'gpsexp.sqlite' in '/sdcard/', and open it with Sqliteman
+4. Access 'gpsdata.sqlite' in '/sdcard/', and open it with Sqliteman
 (Ubuntu) or Sqlite Database Browser (Windows).
