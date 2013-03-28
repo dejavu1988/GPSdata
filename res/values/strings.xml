@@ -6,6 +6,6 @@
     <string name="menu_settings">Settings</string>    
     <string name="start">Start</string>    
     <string name="end">End</string>
-    <string name="name">Experiment Scenario</string>
+    <string name="name">Test</string>
 
 </resources>

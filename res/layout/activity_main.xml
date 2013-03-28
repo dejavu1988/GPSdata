@@ -2,29 +2,44 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:layout_gravity="center"
+    android:gravity="center_horizontal"
     android:keepScreenOn="true"
-     android:orientation="vertical"
+    android:orientation="vertical"
     tools:context=".MainActivity" >
 
-<!-- <EditText
-        android:id="@+id/name"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:hint="@string/name"
-        android:singleLine="true" >
-    </EditText> -->
+ 	<EditText
+ 	    android:id="@+id/name"
+ 	    android:layout_width="wrap_content"
+ 	    android:layout_height="wrap_content"
+ 	    android:layout_gravity="center"
+ 	    android:ems="10"
+ 	    android:hint="@string/name"
+ 	    android:singleLine="true" >
 
-    <Button
-        android:id="@+id/start"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/start" />
-    <Button
-        android:id="@+id/end"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/end" />
+    </EditText>
+
+ 	<Button
+ 	    android:id="@+id/start"
+ 	    android:layout_width="211dp"
+ 	    android:layout_height="wrap_content"
+ 	    android:text="@string/start" />
+
+     <TextView
+         android:id="@+id/result"
+         android:layout_width="70dp"
+         android:layout_height="32dp"
+         android:gravity="center"
+         android:background="@drawable/back"/>
+
+     <DigitalClock
+         android:id="@+id/clock"
+         android:layout_width="70dp"
+         android:layout_height="32dp"
+         android:background="@drawable/back"
+         android:gravity="center"
+         android:text="DigitalClock" />
+     
     <TextView
             android:id="@+id/tp"
             android:layout_width="fill_parent"
@@ -46,6 +61,4 @@
         </LinearLayout>
     </ScrollView>
 
-    
-    
 </LinearLayout>

@@ -9,7 +9,6 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
 import com.example.gpsdata.DBHandler;
 
@@ -22,17 +21,14 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Environment;
-import android.os.Handler;
+import android.os.SystemClock;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.ContextWrapper;
-import android.content.DialogInterface;
-import android.content.Intent;
 import android.util.Log;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -46,11 +42,14 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	public static String experimentId = "Test";
 	public static Boolean status = false;
 	public static long StartTime = 0;
+	public static Boolean isFirstSatOn = false;
+	public static Boolean isFirstLocOn = false;
 	
-	private Button start,end;
+	private Button start;
+	private EditText txtExp;
 	private LinearLayout linearLayout;
-	private Toast toast;
-	private TextView show, tp;
+	//private Toast toast;
+	private TextView show, tp, result;
 	private LocationManager locMgr;
 	public static Location seedLocation;
 	//private Listener gpsStatusListener;
@@ -66,6 +65,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	private List<SatEntry> satList;
 	private DBHandler db;
 	//private Handler mHandler; 
+	private CountDownTimer timer;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -73,16 +73,19 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		setContentView(R.layout.activity_main);
 		
 		start = (Button) findViewById(R.id.start);
-		end = (Button) findViewById(R.id.end);
+		result = (TextView) findViewById(R.id.result);
+		result.setText("IDLE");
+		txtExp = (EditText) findViewById(R.id.name);
 		linearLayout = (LinearLayout)findViewById(R.id.linearLayout);
 		show = (TextView) findViewById(R.id.show);
 		show.setText("There are 0 satellites:");		
-		tp = (TextView) findViewById(R.id.tp);					
+		tp = (TextView) findViewById(R.id.tp);	
+		tp.setText("Initializing first fix ...");
 		start.setOnClickListener(new StartListener());
-		end.setOnClickListener(new EndListener());
+		//end.setOnClickListener(new EndListener());
 
-		//db = new DBHandler(this);
-		
+		db = new DBHandler(this);
+		//mHandler = new Handler();
 		
         locMgr = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		//locMgr.addGpsStatusListener(this);
@@ -96,14 +99,14 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 			seedLocation = locMgr.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
 		}
 		
-		StartTime = System.currentTimeMillis();
+		
 		currentSatEntry = new SatEntry();
 		satList = new ArrayList<SatEntry>();
 		currentLocEntry = new LocEntry(); 
-		currentLocEntry.setLocalTime(StartTime);
+		//currentLocEntry.setLocalTime(StartTime);
 		
-        if (seedLocation == null) { 
-        	tp.setText("Initializing location ...");
+        /*if (seedLocation == null) { 
+        	tp.setText("Initializing first fix ...");
         }else {
         	currentLocEntry.setLoca(seedLocation);
     		double x = currentLocEntry.getLati();
@@ -112,16 +115,58 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
     		String s = "My location: (" + Location.convert(x, Location.FORMAT_SECONDS) + ", " 
     				+ Location.convert(y, Location.FORMAT_SECONDS) + ", " + Location.convert(z, Location.FORMAT_SECONDS) + ")\n";
     		tp.setText(s);
-        }
-		Log.d("loca","s");
+        }*/
+		//Log.d("loca","s");
 		//locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, this);
 
-	    Log.i("dbpath", new ContextWrapper(this).getDatabasePath("gpsexp.sqlite").getAbsolutePath());
+	    //Log.i("dbpath", new ContextWrapper(this).getDatabasePath("gpsexp.sqlite").getAbsolutePath());
 	    //File ofile = new File(Environment.getExternalStorageDirectory().getPath().concat("//gpsexp.sqlite"));
 	    //boolean deleted = ofile.delete();
     	//Log.i("db", ofile.getPath() );
-    	toast = Toast.makeText(getApplicationContext(), "true" ,Toast.LENGTH_SHORT);
+    	//toast = Toast.makeText(getApplicationContext(), "true" ,Toast.LENGTH_SHORT);
     	//if (deleted) toast.show();
+        
+        timer = new CountDownTimer(60000, 1000) {
+
+            public void onTick(long millisUntilFinished) {
+                
+            }
+
+            public void onFinish() {
+            	status = false;
+            	db.close();
+        		result.setText("DONE");
+        		result.setTextColor(Color.RED);
+        		try {
+                    File sd = Environment.getExternalStorageDirectory();
+                    File data = Environment.getDataDirectory();
+
+                    if (sd.canWrite()) {
+                    	
+                    	String currentDBPath = "/data/com.example.gpsdata/databases/gpsdata.sqlite";
+                        String backupDBPath = "gpsdata.sqlite";
+                    	//File ofile = new File(sd.getPath().concat("//").concat(backupDBPath));
+                    	//boolean deleted = ofile.delete();
+                    	//Log.i("db", ofile.getPath() );
+                        
+                        File currentDB = new File(data, currentDBPath);
+                        File backupDB = new File(sd, backupDBPath);
+
+                        if (currentDB.exists()) {
+                            FileChannel src = new FileInputStream(currentDB).getChannel();
+                            FileChannel dst = new FileOutputStream(backupDB).getChannel();
+                            dst.transferFrom(src, 0, src.size());
+                            src.close();
+                            dst.close();
+                            
+                            //toast.setText("data export");
+          		    	  	//toast.show();
+                        }
+                    }
+                } catch (Exception e) {
+                }
+            }
+         };        
 	
 	}
 	
@@ -129,8 +174,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	private class AddSatEntryTask extends AsyncTask<Object, Void, Void> {
         @Override
         protected Void doInBackground(Object... params) {
-          
-            try {
+        	try {
             	if(db != null && status)
             		db.addSatEntry(satList);
             	
@@ -147,17 +191,16 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
     }
 	
 	private class AddLocEntryTask extends AsyncTask<Object, Void, Void> {
-        @Override
-        protected Void doInBackground(Object... params) {
-          
-            try {
-            	if(db != null && status)
+		@Override
+		protected Void doInBackground(Object... params) {
+        	try {
+        		if(db != null && status)
             		db.addLocEntry(currentLocEntry);
             	
             } catch (Exception e) {
               e.printStackTrace();
             }
-            return null;
+        	return null;
         }
 
         @Override
@@ -166,7 +209,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
         }
     }
 	
-	private class AddEntrysTask extends AsyncTask<Object, Void, Void> {
+/*	private class AddEntrysTask extends AsyncTask<Object, Void, Void> {
         @Override
         protected Void doInBackground(Object... params) {
           
@@ -191,9 +234,9 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
                 	
                 	String currentDBPath = "/data/com.example.gpsdata/databases/gpsdata.sqlite";
                     String backupDBPath = "gpsdata.sqlite";
-                	File ofile = new File(sd.getPath().concat("/").concat(backupDBPath));
-                	boolean deleted = ofile.delete();
-                	Log.i("db", ofile.getPath() );
+                	//File ofile = new File(sd.getPath().concat("/").concat(backupDBPath));
+                	//boolean deleted = ofile.delete();
+                	//Log.i("db", ofile.getPath() );
                     
                     File currentDB = new File(data, currentDBPath);
                     File backupDB = new File(sd, backupDBPath);
@@ -205,30 +248,37 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
                         src.close();
                         dst.close();
                         
-                        toast.setText("data export");
-      		    	  	toast.show();
+                        //toast.setText("data export");
+      		    	  	//toast.show();
                     }
                 }
             } catch (Exception e) {
             }
         }
     }
+*/	
+	private void init(){
+		
+	}
 	
 	
 	@Override
 	protected void onResume() {
 		
 	    super.onResume();
-	    locMgr.addGpsStatusListener(this);
-		locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, this);
+	    /*if(status){
+	    	locMgr.addGpsStatusListener(this);
+			locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, this);
+		    	
+	    }*/
 	    
 	}
 	
 	 @Override
 	protected void onPause() {
 			
-		locMgr.removeGpsStatusListener(this);
-		locMgr.removeUpdates(this);
+		//locMgr.removeGpsStatusListener(this);
+		//locMgr.removeUpdates(this);
 		super.onPause();
 	}
 	
@@ -247,7 +297,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		return true;
 	}
 	
-	@Override
+/*	@Override
     public boolean onOptionsItemSelected(MenuItem item) {
         
     	switch (item.getItemId()) {
@@ -279,25 +329,24 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
     	Log.i("menu", experimentId);
     	return true;
     }
-	
+*/	
 /***************Button listeners****************/	
 	
 	class StartListener implements OnClickListener {
 		  public void onClick(View v) {
-			  //linearLayout.removeViews (0, linearLayout.getChildCount());
-			  //scenario = (EditText) findViewById(R.id.name);
-			  //locMgr.addGpsStatusListener(MainActivity.this); 
+			  
 		      status = true;
-		      db = new DBHandler(MainActivity.this);
-		      if(db!=null){
-		    	  toast.setText("data collection");
-		    	  toast.show();
-		      }
-		      //locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, MainActivity.this);
+		      result.setText("WORKING");
+		      result.setTextColor(Color.GREEN);
+		      experimentId = txtExp.getText().toString(); Log.i("dbID", experimentId);
+		      StartTime = SystemClock.elapsedRealtime();
+		      locMgr.addGpsStatusListener(MainActivity.this); 
+		      locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, MainActivity.this);
+		      timer.start();
 		  }
 	}
 	
-	class EndListener implements OnClickListener {
+/*	class EndListener implements OnClickListener {
 		  public void onClick(View v) {
 			  //linearLayout.removeViews (0, linearLayout.getChildCount());
 			  //locMgr.removeGpsStatusListener(MainActivity.this); 
@@ -308,18 +357,24 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	          
 		  }
 	}
-
+*/
 /***************onGpsStatusChanged****************/	
 	@Override
 	public void onGpsStatusChanged(int event) {
 		// TODO Auto-generated method stub
+		if(!status) {
+			locMgr.removeGpsStatusListener(this);
+			locMgr.removeUpdates(this);
+			return;
+		}
+		if(!isFirstSatOn) isFirstSatOn = true;
 		gpsStatus =locMgr.getGpsStatus(null);
 		if(gpsStatus != null && event == GpsStatus.GPS_EVENT_SATELLITE_STATUS){
 			Iterable<GpsSatellite> iSatellites =gpsStatus.getSatellites();
             Iterator<GpsSatellite> it = iSatellites.iterator();
             linearLayout.removeViews(0, linearLayout.getChildCount());
             
-            currentSatEntry.setLocalTime(System.currentTimeMillis());
+            currentSatEntry.setLocalTime(SystemClock.elapsedRealtime());
             satList.clear();
             int count=0;
             while(it.hasNext()){
@@ -336,8 +391,8 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
              }
             show.setText("There are " + count + " satellites:");
             Log.i("menu", experimentId);
-            AddSatEntryTask addSatEntryTask = new AddSatEntryTask();
-            addSatEntryTask.execute((Object[]) null);
+            
+            new AddSatEntryTask().execute((Object[]) null);
 		}
 	}
 	
@@ -345,8 +400,13 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	@Override
 	public void onLocationChanged(Location location) {
 		// TODO Auto-generated method stub
-		
-		currentLocEntry.setLocalTime(System.currentTimeMillis()); // update current timestamp
+		if(!status) {
+			locMgr.removeGpsStatusListener(this);
+			locMgr.removeUpdates(this);
+			return;
+		}
+		if(!isFirstLocOn) isFirstLocOn = true;
+		currentLocEntry.setLocalTime(SystemClock.elapsedRealtime()); // update current timestamp
 		currentLocEntry.setLoca(location);
 		
 		Log.d("loca", currentLocEntry.toString());
@@ -358,8 +418,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		tp.setText(s);
     	tp.setTextColor(Color.BLUE);
     	
-    	AddLocEntryTask addLocEntryTask = new AddLocEntryTask();
-        addLocEntryTask.execute((Object[]) null);
+    	new AddLocEntryTask().execute((Object[]) null);
 	}
 
 	@Override

@@ -21,11 +21,11 @@ import android.util.Log;
 public class DBHandler extends SQLiteOpenHelper {
 
 	private static final String DATABASE_NAME = "gpsdata.sqlite"; 
-	private static final String DATABASE_PATH = "/data/data/com.example.gpsdata/databases/";
-    private static final int DATABASE_VERSION = 1;  
-    private static String TABLE_NAME;  
+	//private static final String DATABASE_PATH = "/data/data/com.example.gpsdata/databases/";
+    private static final int DATABASE_VERSION = 3;  
+    private static final String TABLE_NAME = "TEST";  
     public static final String KEY_ID = "id";  
-    //public static final String KEY_EXPID = "expid"; 
+    public static final String KEY_EXPID = "expid"; 
     public static final String KEY_PRN = "prn";  
     public static final String KEY_AZIMUTH = "azimuth"; 
     public static final String KEY_ELEVATION = "elevation"; 
@@ -34,7 +34,7 @@ public class DBHandler extends SQLiteOpenHelper {
     public static final String KEY_LATITUDE = "lati";
     public static final String KEY_LONGITUDE = "longi";
     public static final String KEY_ALTITUDE = "alti";
-    public static final String KEY_TIME = "time";  //timestamp
+    public static final String KEY_TIME = "time"; 
 	
     public DBHandler(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -44,11 +44,19 @@ public class DBHandler extends SQLiteOpenHelper {
 	@Override
 	public void onCreate(SQLiteDatabase db) {
 		// TODO Auto-generated method stub
-		TABLE_NAME = MainActivity.experimentId;
+		//TABLE_NAME = MainActivity.experimentId;
+		/*String sql1 = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME.concat("_SAT") + " (" + KEY_ID + " INTEGER AUTOINCREMENT, "
+				+ KEY_EXPID + " TEXT, " + KEY_PRN + " INTEGER, " + KEY_AZIMUTH + " REAL, "
+				+ KEY_ELEVATION + " INTEGER, "+  KEY_SNR +" REAL, " + KEY_TIME + " INTEGER, PRIMARY KEY(" + KEY_ID + ", " + KEY_EXPID +"));";  
+		String sql2 = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME.concat("_LOC") + " (" + KEY_ID + " INTEGER AUTOINCREMENT, "
+				+ KEY_EXPID + " TEXT, "
+				+ KEY_LATITUDE + " REAL DEFAULT 0, " + KEY_LONGITUDE + " REAL DEFAULT 0, " + KEY_ALTITUDE + " REAL DEFAULT 0, "
+				+ KEY_TIME + " INTEGER, PRIMARY KEY(" + KEY_ID + ", "  + KEY_EXPID +"));";  */
 		String sql1 = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME.concat("_SAT") + " (" + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-				+ KEY_PRN + " INTEGER, " + KEY_AZIMUTH + " REAL, "
-				+ KEY_ELEVATION + " INTEGER , "+  KEY_SNR +" REAL, " + KEY_TIME + " INTEGER);";  
+				+ KEY_EXPID + " TEXT, " + KEY_PRN + " INTEGER, " + KEY_AZIMUTH + " REAL, "
+				+ KEY_ELEVATION + " INTEGER, "+  KEY_SNR +" REAL, " + KEY_TIME + " INTEGER);";  
 		String sql2 = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME.concat("_LOC") + " (" + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+				+ KEY_EXPID + " TEXT, "
 				+ KEY_LATITUDE + " REAL DEFAULT 0, " + KEY_LONGITUDE + " REAL DEFAULT 0, " + KEY_ALTITUDE + " REAL DEFAULT 0, "
 				+ KEY_TIME + " INTEGER);";  
 	    try{
@@ -73,12 +81,12 @@ public class DBHandler extends SQLiteOpenHelper {
 	// insert a SatEntry with full info
 	public void addSatEntry(List<SatEntry> sList) {  
 		SQLiteDatabase db = this.getWritableDatabase(); 
-		/* ContentValues */  
+		
 		ContentValues cv = new ContentValues();
 		Iterator<SatEntry> it = sList.iterator();
 		while(it.hasNext()){
 			SatEntry s = (SatEntry) it.next();
-			//cv.put(KEY_EXPID, expid);
+			cv.put(KEY_EXPID, MainActivity.experimentId);
 			cv.put(KEY_PRN, s.getPRN());
 			cv.put(KEY_AZIMUTH, s.getAzimuth()); 
 			cv.put(KEY_ELEVATION, s.getElevation());
@@ -86,23 +94,47 @@ public class DBHandler extends SQLiteOpenHelper {
 			cv.put(KEY_TIME, s.getLocalTime());
 			long row = db.insert(TABLE_NAME.concat("_SAT"), null, cv); 
 		}
-		db.close(); 
+		//db.close(); 
 	}  
 	
 	// insert a LocEntry with full info
 	public long addLocEntry(LocEntry l) {  
 		SQLiteDatabase db = this.getWritableDatabase();  
-		/* ContentValues */  
+		
 		ContentValues cv = new ContentValues();  
-		//cv.put(KEY_EXPID, expid);
+		cv.put(KEY_EXPID, MainActivity.experimentId);
 		cv.put(KEY_LATITUDE, l.getLati());
 		cv.put(KEY_LONGITUDE, l.getLongi());
 		cv.put(KEY_ALTITUDE, l.getAlti());
 		cv.put(KEY_TIME, l.getLocalTime());
 		long row = db.insert(TABLE_NAME.concat("_LOC"), null, cv);  
-		db.close();
+		//db.close();
 		return row;  
 	}  
 		
+	public void addEntry(List<SatEntry> sList, LocEntry l) {  
+		SQLiteDatabase db = this.getWritableDatabase(); 
 		
+		ContentValues cv = new ContentValues();
+		Iterator<SatEntry> it = sList.iterator();
+		while(it.hasNext()){
+			SatEntry s = (SatEntry) it.next();
+			cv.put(KEY_EXPID, MainActivity.experimentId);
+			cv.put(KEY_PRN, s.getPRN());
+			cv.put(KEY_AZIMUTH, s.getAzimuth()); 
+			cv.put(KEY_ELEVATION, s.getElevation());
+			cv.put(KEY_SNR, s.getSNR()); 
+			cv.put(KEY_TIME, s.getLocalTime());
+			long row = db.insert(TABLE_NAME.concat("_SAT"), null, cv); 
+		}
+		
+		ContentValues cv2 = new ContentValues();  
+		cv2.put(KEY_EXPID, MainActivity.experimentId);
+		cv2.put(KEY_LATITUDE, l.getLati());
+		cv2.put(KEY_LONGITUDE, l.getLongi());
+		cv2.put(KEY_ALTITUDE, l.getAlti());
+		cv2.put(KEY_TIME, l.getLocalTime());
+		long row2 = db.insert(TABLE_NAME.concat("_LOC"), null, cv2);
+		//db.close(); 
+	}  
 }
