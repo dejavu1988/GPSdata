@@ -1,6 +1,5 @@
 package com.example.gpsdata;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -10,13 +9,10 @@ import com.example.gpsdata.MainActivity.SatEntry;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.ContextWrapper;
-import android.database.DatabaseErrorHandler;
+import android.database.DatabaseUtils.InsertHelper;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.database.sqlite.SQLiteDatabase.CursorFactory;
-import android.location.GpsSatellite;
 import android.util.Log;
 
 public class DBHandler extends SQLiteOpenHelper {
@@ -36,7 +32,8 @@ public class DBHandler extends SQLiteOpenHelper {
     public static final String KEY_LONGITUDE = "longi";
     public static final String KEY_ALTITUDE = "alti";
     public static final String KEY_TIME = "time"; 
-	
+    private InsertHelper m1Insert, m2Insert;
+    
     public DBHandler(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -68,9 +65,16 @@ public class DBHandler extends SQLiteOpenHelper {
 	    }
 		
 	}
+	
+	@Override
+    public void onOpen(SQLiteDatabase db) {
+        super.onOpen(db);
+        m1Insert = new InsertHelper(db, TABLE_NAME.concat("_SAT"));
+        m2Insert = new InsertHelper(db, TABLE_NAME.concat("_LOC"));
+    }
 
 	@Override
-	public void onUpgrade(SQLiteDatabase db, int arg1, int arg2) {
+	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 		// TODO Auto-generated method stub
 		String sql1 = "DROP TABLE IF EXISTS " + TABLE_NAME.concat("_SAT");
 		String sql2 = "DROP TABLE IF EXISTS " + TABLE_NAME.concat("_LOC");
@@ -81,26 +85,34 @@ public class DBHandler extends SQLiteOpenHelper {
 
 	// insert a SatEntry with full info
 	public void addSatEntry(List<SatEntry> sList) {  
-		SQLiteDatabase db = this.getWritableDatabase(); 
-		
-		ContentValues cv = new ContentValues();
-		Iterator<SatEntry> it = sList.iterator();
 		if(sList.isEmpty()) return;
-		while(it.hasNext()){			
-			SatEntry s = it.next();
-			cv.put(KEY_EXPID, MainActivity.experimentId);
-			cv.put(KEY_PRN, s.getPRN());
-			cv.put(KEY_AZIMUTH, s.getAzimuth()); 
-			cv.put(KEY_ELEVATION, s.getElevation());
-			cv.put(KEY_SNR, s.getSNR()); 
-			cv.put(KEY_TIME, s.getLocalTime());
-			db.insert(TABLE_NAME.concat("_SAT"), null, cv); 
+		SQLiteDatabase db = this.getWritableDatabase(); 
+		db.beginTransaction();
+		try{
+			ContentValues cv = new ContentValues();			
+			Iterator<SatEntry> it = sList.iterator();
+			while(it.hasNext()){			
+				SatEntry s = it.next();
+				cv.clear();
+				cv.put(KEY_EXPID, MainActivity.experimentId);
+				cv.put(KEY_PRN, s.getPRN());
+				cv.put(KEY_AZIMUTH, s.getAzimuth()); 
+				cv.put(KEY_ELEVATION, s.getElevation());
+				cv.put(KEY_SNR, s.getSNR()); 
+				cv.put(KEY_TIME, s.getLocalTime());
+				//db.insert(TABLE_NAME.concat("_SAT"), null, cv);
+				m1Insert.insert(cv);
+			}	
+			db.setTransactionSuccessful();
+		}finally{
+			db.endTransaction();
 		}
+		
 		//db.close(); 
 	}  
 	
 	// insert a LocEntry with full info
-	public long addLocEntry(LocEntry l) {  
+	public void addLocEntry(LocEntry l) {  
 		SQLiteDatabase db = this.getWritableDatabase();  
 		
 		ContentValues cv = new ContentValues();  
@@ -109,26 +121,39 @@ public class DBHandler extends SQLiteOpenHelper {
 		cv.put(KEY_LONGITUDE, l.getLongi());
 		cv.put(KEY_ALTITUDE, l.getAlti());
 		cv.put(KEY_TIME, l.getLocalTime());
-		long row = db.insert(TABLE_NAME.concat("_LOC"), null, cv);  
-		//db.close();
-		return row;  
+		//long row = db.insert(TABLE_NAME.concat("_LOC"), null, cv);
+		m2Insert.insert(cv);
+		//db.close(); 
 	}  
 		
-	public void addEntry(List<SatEntry> sList, LocEntry l) {  
+/*	public void addEntry(List<SatEntry> sList, LocEntry l) {  
 		SQLiteDatabase db = this.getWritableDatabase(); 
-		
+		db.beginTransaction();
 		ContentValues cv = new ContentValues();
-		if(sList.isEmpty()) return;
-		int i = 0;
-		while(i < sList.size()){			
-			SatEntry s = sList.get(i++);
+		Iterator<SatEntry> it = sList.iterator();
+		
+		if(sList.isEmpty()) {
+			cv.put(KEY_EXPID, MainActivity.experimentId);
+			cv.put(KEY_PRN, 0);
+			cv.put(KEY_AZIMUTH, 0); 
+			cv.put(KEY_ELEVATION, 0);
+			cv.put(KEY_SNR, 0); 
+			cv.put(KEY_TIME, 0);
+			//db.insert(TABLE_NAME.concat("_SAT"), null, cv);
+			m1Insert.insert(cv);
+		}
+
+		while(it.hasNext()){			
+			SatEntry s = it.next();
+			cv.clear();
 			cv.put(KEY_EXPID, MainActivity.experimentId);
 			cv.put(KEY_PRN, s.getPRN());
 			cv.put(KEY_AZIMUTH, s.getAzimuth()); 
 			cv.put(KEY_ELEVATION, s.getElevation());
 			cv.put(KEY_SNR, s.getSNR()); 
 			cv.put(KEY_TIME, s.getLocalTime());
-			db.insert(TABLE_NAME.concat("_SAT"), null, cv); 
+			//db.insert(TABLE_NAME.concat("_SAT"), null, cv);
+			m1Insert.insert(cv);
 		}
 		
 		ContentValues cv2 = new ContentValues();  
@@ -137,7 +162,12 @@ public class DBHandler extends SQLiteOpenHelper {
 		cv2.put(KEY_LONGITUDE, l.getLongi());
 		cv2.put(KEY_ALTITUDE, l.getAlti());
 		cv2.put(KEY_TIME, l.getLocalTime());
-		db.insert(TABLE_NAME.concat("_LOC"), null, cv2);
+		//db.insert(TABLE_NAME.concat("_LOC"), null, cv2);
+		m2Insert.insert(cv2);
+		
+		db.setTransactionSuccessful();
+		db.endTransaction();
+		
 		//db.close(); 
-	}  
+	}*/  
 }

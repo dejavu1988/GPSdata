@@ -15,7 +15,6 @@ import com.example.gpsdata.DBHandler;
 import android.graphics.Color;
 import android.location.GpsSatellite;
 import android.location.GpsStatus;
-import android.location.GpsStatus.Listener;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -26,7 +25,6 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.app.Activity;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -35,13 +33,13 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends Activity implements GpsStatus.Listener, LocationListener{
 
 	public static String experimentId = "Test";
 	public static Boolean status = false;
 	public static long StartTime = 0;
+	public static long EndTime = 0;
 	public static Boolean isFirstSatOn = false;
 	public static Boolean isFirstLocOn = false;
 	
@@ -49,7 +47,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	private EditText txtExp;
 	private LinearLayout linearLayout;
 	//private Toast toast;
-	private TextView show, tp, result;
+	private TextView show, tp, tl, result;
 	private LocationManager locMgr;
 	public static Location seedLocation;
 	//private Listener gpsStatusListener;
@@ -64,7 +62,6 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	private SatEntry currentSatEntry;
 	private List<SatEntry> satList;
 	private DBHandler db;
-	//private Handler mHandler; 
 	private CountDownTimer timer;
 	
 	@Override
@@ -77,47 +74,21 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		result.setText("IDLE");
 		txtExp = (EditText) findViewById(R.id.name);
 		linearLayout = (LinearLayout)findViewById(R.id.linearLayout);
-		show = (TextView) findViewById(R.id.show);
-		//show.setText("There are 0 satellites:");		
-		tp = (TextView) findViewById(R.id.tp);	
-		//tp.setText("Initializing first fix ...");
+		show = (TextView) findViewById(R.id.show);	
+		tl = (TextView) findViewById(R.id.tl);
+		tp = (TextView) findViewById(R.id.tp);
 		start.setOnClickListener(new StartListener());
-		//end.setOnClickListener(new EndListener());
 
 		db = new DBHandler(this);
-		//mHandler = new Handler();
 		
         locMgr = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		//locMgr.addGpsStatusListener(this);
-		
-		if ( locMgr.getLastKnownLocation(LocationManager.GPS_PROVIDER) != null)
-		{		// If GPS can provide the last known location data, get it using GPS
-			seedLocation = locMgr.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-		
-		}else if (locMgr.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) != null)
-		{		// otherwise, test mobile network provider if the last known location is available
-			seedLocation = locMgr.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-		}
-		
-		
+        //locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, this);
 		currentSatEntry = new SatEntry();
 		satList = new ArrayList<SatEntry>();
 		currentLocEntry = new LocEntry(); 
-		//currentLocEntry.setLocalTime(StartTime);
 		
-        /*if (seedLocation == null) { 
-        	tp.setText("Initializing first fix ...");
-        }else {
-        	currentLocEntry.setLoca(seedLocation);
-    		double x = currentLocEntry.getLati();
-    		double y = currentLocEntry.getLongi();
-    		double z = currentLocEntry.getAlti();
-    		String s = "My location: (" + Location.convert(x, Location.FORMAT_SECONDS) + ", " 
-    				+ Location.convert(y, Location.FORMAT_SECONDS) + ", " + Location.convert(z, Location.FORMAT_SECONDS) + ")\n";
-    		tp.setText(s);
-        }*/
-		//Log.d("loca","s");
-		//locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, this);
+		
 
 	    //Log.i("dbpath", new ContextWrapper(this).getDatabasePath("gpsexp.sqlite").getAbsolutePath());
 	    //File ofile = new File(Environment.getExternalStorageDirectory().getPath().concat("//gpsexp.sqlite"));
@@ -126,23 +97,41 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
     	//toast = Toast.makeText(getApplicationContext(), "true" ,Toast.LENGTH_SHORT);
     	//if (deleted) toast.show();
         
-        timer = new CountDownTimer(60000, 1000) {
+        timer = new CountDownTimer(300000, 1000) {
 
         	public void onTick(long millisUntilFinished) {
                 //Toast toast = new Toast(MainActivity.this);
                 //toast.setText("seconds remaining: " + millisUntilFinished / 1000);
                 //toast.show();
-            }
+        	}
 
             public void onFinish() {
             	status = false;
-            	db.close();
+            	EndTime = SystemClock.elapsedRealtime();
+            	locMgr.removeGpsStatusListener(MainActivity.this);
+        		locMgr.removeUpdates(MainActivity.this);
+        		
         		result.setText("DONE");
-        		result.setTextColor(Color.RED);
-        		show.setText("");
+        		result.setTextColor(Color.RED);        		
+        		tl.setText("");
         		tp.setText("");
+        		show.setText("");
         		txtExp.setText("");
         		linearLayout.removeViews(0, linearLayout.getChildCount());
+        		start.setEnabled(true);
+        		
+  		      	LocEntry tmpLocEntry = new LocEntry();
+            	tmpLocEntry.setLocalTime(EndTime);
+  		      	SatEntry tmpSatEntry = new SatEntry();
+  		      	tmpSatEntry.setLocalTime(EndTime);
+  		      	List<SatEntry> tmpList = new ArrayList<SatEntry>();
+                tmpList.add(tmpSatEntry);
+                if(db!=null){
+              	  db.addSatEntry(tmpList);
+              	  db.addLocEntry(tmpLocEntry);
+                }            	
+            	db.close();
+        		
         		try {
                     File sd = Environment.getExternalStorageDirectory();
                     File data = Environment.getDataDirectory();
@@ -177,12 +166,12 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	}
 	
 		
-	private class AddSatEntryTask extends AsyncTask<Object, Void, Void> {
+	private class AddSatEntryTask extends AsyncTask<List<SatEntry>, Void, Void> {
         @Override
-        protected Void doInBackground(Object... params) {
+        protected Void doInBackground(List<SatEntry>... sList) {
         	try {
             	if(db != null && status)
-            		db.addSatEntry(satList);
+            		db.addSatEntry(sList[0]);
             	
             } catch (Exception e) {
               e.printStackTrace();
@@ -196,12 +185,12 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
         }
     }
 	
-	private class AddLocEntryTask extends AsyncTask<Object, Void, Void> {
+	private class AddLocEntryTask extends AsyncTask<LocEntry, Void, Void> {
 		@Override
-		protected Void doInBackground(Object... params) {
+		protected Void doInBackground(LocEntry... loc) {
         	try {
         		if(db != null && status)
-            		db.addLocEntry(currentLocEntry);
+            		db.addLocEntry(loc[0]);
             	
             } catch (Exception e) {
               e.printStackTrace();
@@ -218,55 +207,17 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 /*	private class AddEntrysTask extends AsyncTask<Object, Void, Void> {
         @Override
         protected Void doInBackground(Object... params) {
-          
-            try {
-            	if(db != null && status){
-            		db.addSatEntry(satList);
-            		db.addLocEntry(currentLocEntry);
-            	}           	
-            } catch (Exception e) {
-              e.printStackTrace();
-            }
-            return null;
+        	if(db != null && status){        		
+        		db.addEntry(satList,currentLocEntry);            
+        	}
+			return null;
         }
 
         @Override
         protected void onPostExecute(final Void unused) {
-        	try {
-                File sd = Environment.getExternalStorageDirectory();
-                File data = Environment.getDataDirectory();
-
-                if (sd.canWrite()) {
-                	
-                	String currentDBPath = "/data/com.example.gpsdata/databases/gpsdata.sqlite";
-                    String backupDBPath = "gpsdata.sqlite";
-                	//File ofile = new File(sd.getPath().concat("/").concat(backupDBPath));
-                	//boolean deleted = ofile.delete();
-                	//Log.i("db", ofile.getPath() );
-                    
-                    File currentDB = new File(data, currentDBPath);
-                    File backupDB = new File(sd, backupDBPath);
-
-                    if (currentDB.exists()) {
-                        FileChannel src = new FileInputStream(currentDB).getChannel();
-                        FileChannel dst = new FileOutputStream(backupDB).getChannel();
-                        dst.transferFrom(src, 0, src.size());
-                        src.close();
-                        dst.close();
-                        
-                        //toast.setText("data export");
-      		    	  	//toast.show();
-                    }
-                }
-            } catch (Exception e) {
-            }
+        	
         }
-    }
-*/	
-	private void init(){
-		
-	}
-	
+    }*/
 	
 	@Override
 	protected void onResume() {
@@ -344,28 +295,26 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		      status = true;
 		      result.setText("WORKING");
 		      result.setTextColor(Color.GREEN);
-		      show.setText("There are 0 satellites:");
+		      tl.setText("Location coordinates:");
 		      tp.setText("Initializing first fix ...");
+		      show.setText("0 satellites in view.");		      
+		      start.setEnabled(false);
 		      experimentId = txtExp.getText().toString(); Log.i("dbID", experimentId);
 		      StartTime = SystemClock.elapsedRealtime();
+		      currentSatEntry.setLocalTime(StartTime);
+		      currentLocEntry.setLocalTime(StartTime);
+		      SatEntry tmpSatEntry = new SatEntry().set(currentSatEntry);
+              satList.add(tmpSatEntry);
+              if(db!=null){
+            	  db.addSatEntry(satList);
+            	  db.addLocEntry(currentLocEntry);
+              }
 		      locMgr.addGpsStatusListener(MainActivity.this); 
 		      locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, MainActivity.this);
 		      timer.start();
 		  }
 	}
 	
-/*	class EndListener implements OnClickListener {
-		  public void onClick(View v) {
-			  //linearLayout.removeViews (0, linearLayout.getChildCount());
-			  //locMgr.removeGpsStatusListener(MainActivity.this); 
-		      status = false;
-		      //locMgr.removeUpdates(MainActivity.this);
-		      AddEntrysTask addEntrysTask = new AddEntrysTask();
-	          addEntrysTask.execute((Object[]) null);
-	          
-		  }
-	}
-*/
 /***************onGpsStatusChanged****************/	
 	@Override
 	public void onGpsStatusChanged(int event) {
@@ -399,10 +348,10 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
               tv.setTextColor(Color.BLUE);
               linearLayout.addView(tv);
              }
-            show.setText("There are " + count + " satellites:");
+            show.setText(count + " satellites in view:");
             Log.i("slist", String.valueOf(satList.get(0).getPRN()));
             
-            new AddSatEntryTask().execute((Object[]) null);
+            new AddSatEntryTask().execute(satList);
 		}
 	}
 	
@@ -423,12 +372,12 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		double x = currentLocEntry.getLati();
 		double y = currentLocEntry.getLongi();
 		double z = currentLocEntry.getAlti();
-		String s = "My location: (" + Location.convert(x, Location.FORMAT_SECONDS) + ", " 
-				+ Location.convert(y, Location.FORMAT_SECONDS) + ", " + Location.convert(z, Location.FORMAT_SECONDS) + ")\n";
+		String s = "Latitude=" + Location.convert(x, Location.FORMAT_SECONDS) + ", Longitude=" 
+				+ Location.convert(y, Location.FORMAT_SECONDS) + ", Altitude=" + z;
 		tp.setText(s);
     	tp.setTextColor(Color.BLUE);
     	
-    	new AddLocEntryTask().execute((Object[]) null);
+    	new AddLocEntryTask().execute(currentLocEntry);
 	}
 
 	@Override
