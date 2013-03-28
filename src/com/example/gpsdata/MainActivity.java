@@ -78,9 +78,9 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		txtExp = (EditText) findViewById(R.id.name);
 		linearLayout = (LinearLayout)findViewById(R.id.linearLayout);
 		show = (TextView) findViewById(R.id.show);
-		show.setText("There are 0 satellites:");		
+		//show.setText("There are 0 satellites:");		
 		tp = (TextView) findViewById(R.id.tp);	
-		tp.setText("Initializing first fix ...");
+		//tp.setText("Initializing first fix ...");
 		start.setOnClickListener(new StartListener());
 		//end.setOnClickListener(new EndListener());
 
@@ -128,8 +128,10 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
         
         timer = new CountDownTimer(60000, 1000) {
 
-            public void onTick(long millisUntilFinished) {
-                
+        	public void onTick(long millisUntilFinished) {
+                //Toast toast = new Toast(MainActivity.this);
+                //toast.setText("seconds remaining: " + millisUntilFinished / 1000);
+                //toast.show();
             }
 
             public void onFinish() {
@@ -137,6 +139,10 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
             	db.close();
         		result.setText("DONE");
         		result.setTextColor(Color.RED);
+        		show.setText("");
+        		tp.setText("");
+        		txtExp.setText("");
+        		linearLayout.removeViews(0, linearLayout.getChildCount());
         		try {
                     File sd = Environment.getExternalStorageDirectory();
                     File data = Environment.getDataDirectory();
@@ -266,19 +272,19 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	protected void onResume() {
 		
 	    super.onResume();
-	    /*if(status){
+	    if(status){
 	    	locMgr.addGpsStatusListener(this);
 			locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, this);
 		    	
-	    }*/
+	    }
 	    
 	}
 	
 	 @Override
 	protected void onPause() {
 			
-		//locMgr.removeGpsStatusListener(this);
-		//locMgr.removeUpdates(this);
+		locMgr.removeGpsStatusListener(this);
+		locMgr.removeUpdates(this);
 		super.onPause();
 	}
 	
@@ -338,6 +344,8 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		      status = true;
 		      result.setText("WORKING");
 		      result.setTextColor(Color.GREEN);
+		      show.setText("There are 0 satellites:");
+		      tp.setText("Initializing first fix ...");
 		      experimentId = txtExp.getText().toString(); Log.i("dbID", experimentId);
 		      StartTime = SystemClock.elapsedRealtime();
 		      locMgr.addGpsStatusListener(MainActivity.this); 
@@ -381,8 +389,10 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
               count=count+1;
               GpsSatellite oSat = (GpsSatellite) it.next();              
               currentSatEntry.setSate(oSat);
-              satList.add(currentSatEntry);
               
+              SatEntry tmpSatEntry = new SatEntry().set(currentSatEntry);
+              satList.add(tmpSatEntry);
+              Log.i("clist", String.valueOf(currentSatEntry.getPRN()));
               TextView tv = new TextView(getApplicationContext());
               tv.setId(currentSatEntry.getPRN());
               tv.setText("Sat" + currentSatEntry.getPRN() + ": Azimuth=" + currentSatEntry.getAzimuth() + ", Elevation=" + currentSatEntry.getElevation() + ", SNR=" + currentSatEntry.getSNR());
@@ -390,7 +400,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
               linearLayout.addView(tv);
              }
             show.setText("There are " + count + " satellites:");
-            Log.i("menu", experimentId);
+            Log.i("slist", String.valueOf(satList.get(0).getPRN()));
             
             new AddSatEntryTask().execute((Object[]) null);
 		}
@@ -566,12 +576,13 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		
 		
 			// get assigned from another SatEntry
-		public void set(SatEntry s) {
+		public SatEntry set(SatEntry s) {
 			this.localtime = s.localtime;
 			this.prn = s.prn;
 			this.azimuth = s.azimuth;
 			this.elevation = s.elevation;
 			this.snr = s.snr;
+			return this;
 		}
 		
 		// getting local timestamp

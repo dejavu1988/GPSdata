@@ -1,5 +1,6 @@
 package com.example.gpsdata;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -84,15 +85,16 @@ public class DBHandler extends SQLiteOpenHelper {
 		
 		ContentValues cv = new ContentValues();
 		Iterator<SatEntry> it = sList.iterator();
-		while(it.hasNext()){
-			SatEntry s = (SatEntry) it.next();
+		if(sList.isEmpty()) return;
+		while(it.hasNext()){			
+			SatEntry s = it.next();
 			cv.put(KEY_EXPID, MainActivity.experimentId);
 			cv.put(KEY_PRN, s.getPRN());
 			cv.put(KEY_AZIMUTH, s.getAzimuth()); 
 			cv.put(KEY_ELEVATION, s.getElevation());
 			cv.put(KEY_SNR, s.getSNR()); 
 			cv.put(KEY_TIME, s.getLocalTime());
-			long row = db.insert(TABLE_NAME.concat("_SAT"), null, cv); 
+			db.insert(TABLE_NAME.concat("_SAT"), null, cv); 
 		}
 		//db.close(); 
 	}  
@@ -116,16 +118,17 @@ public class DBHandler extends SQLiteOpenHelper {
 		SQLiteDatabase db = this.getWritableDatabase(); 
 		
 		ContentValues cv = new ContentValues();
-		Iterator<SatEntry> it = sList.iterator();
-		while(it.hasNext()){
-			SatEntry s = (SatEntry) it.next();
+		if(sList.isEmpty()) return;
+		int i = 0;
+		while(i < sList.size()){			
+			SatEntry s = sList.get(i++);
 			cv.put(KEY_EXPID, MainActivity.experimentId);
 			cv.put(KEY_PRN, s.getPRN());
 			cv.put(KEY_AZIMUTH, s.getAzimuth()); 
 			cv.put(KEY_ELEVATION, s.getElevation());
 			cv.put(KEY_SNR, s.getSNR()); 
 			cv.put(KEY_TIME, s.getLocalTime());
-			long row = db.insert(TABLE_NAME.concat("_SAT"), null, cv); 
+			db.insert(TABLE_NAME.concat("_SAT"), null, cv); 
 		}
 		
 		ContentValues cv2 = new ContentValues();  
@@ -134,7 +137,7 @@ public class DBHandler extends SQLiteOpenHelper {
 		cv2.put(KEY_LONGITUDE, l.getLongi());
 		cv2.put(KEY_ALTITUDE, l.getAlti());
 		cv2.put(KEY_TIME, l.getLocalTime());
-		long row2 = db.insert(TABLE_NAME.concat("_LOC"), null, cv2);
+		db.insert(TABLE_NAME.concat("_LOC"), null, cv2);
 		//db.close(); 
 	}  
 }
