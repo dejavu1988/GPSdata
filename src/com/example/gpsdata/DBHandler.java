@@ -9,7 +9,6 @@ import com.example.gpsdata.MainActivity.SatEntry;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.database.DatabaseUtils.InsertHelper;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -32,7 +31,7 @@ public class DBHandler extends SQLiteOpenHelper {
     public static final String KEY_LONGITUDE = "longi";
     public static final String KEY_ALTITUDE = "alti";
     public static final String KEY_TIME = "time"; 
-    private InsertHelper m1Insert, m2Insert;
+    //private InsertHelper m1Insert, m2Insert;
     
     public DBHandler(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -69,8 +68,8 @@ public class DBHandler extends SQLiteOpenHelper {
 	@Override
     public void onOpen(SQLiteDatabase db) {
         super.onOpen(db);
-        m1Insert = new InsertHelper(db, TABLE_NAME.concat("_SAT"));
-        m2Insert = new InsertHelper(db, TABLE_NAME.concat("_LOC"));
+        //m1Insert = new InsertHelper(db, TABLE_NAME.concat("_SAT"));
+        //m2Insert = new InsertHelper(db, TABLE_NAME.concat("_LOC"));
     }
 
 	@Override
@@ -100,8 +99,8 @@ public class DBHandler extends SQLiteOpenHelper {
 				cv.put(KEY_ELEVATION, s.getElevation());
 				cv.put(KEY_SNR, s.getSNR()); 
 				cv.put(KEY_TIME, s.getLocalTime());
-				//db.insert(TABLE_NAME.concat("_SAT"), null, cv);
-				m1Insert.insert(cv);
+				db.insert(TABLE_NAME.concat("_SAT"), null, cv);
+				//m1Insert.insert(cv);
 			}	
 			db.setTransactionSuccessful();
 		}finally{
@@ -121,8 +120,8 @@ public class DBHandler extends SQLiteOpenHelper {
 		cv.put(KEY_LONGITUDE, l.getLongi());
 		cv.put(KEY_ALTITUDE, l.getAlti());
 		cv.put(KEY_TIME, l.getLocalTime());
-		//long row = db.insert(TABLE_NAME.concat("_LOC"), null, cv);
-		m2Insert.insert(cv);
+		db.insert(TABLE_NAME.concat("_LOC"), null, cv);
+		//m2Insert.insert(cv);
 		//db.close(); 
 	}  
 		
@@ -139,8 +138,8 @@ public class DBHandler extends SQLiteOpenHelper {
 			cv.put(KEY_ELEVATION, 0);
 			cv.put(KEY_SNR, 0); 
 			cv.put(KEY_TIME, 0);
-			//db.insert(TABLE_NAME.concat("_SAT"), null, cv);
-			m1Insert.insert(cv);
+			db.insert(TABLE_NAME.concat("_SAT"), null, cv);
+			//m1Insert.insert(cv);
 		}
 
 		while(it.hasNext()){			
@@ -152,8 +151,8 @@ public class DBHandler extends SQLiteOpenHelper {
 			cv.put(KEY_ELEVATION, s.getElevation());
 			cv.put(KEY_SNR, s.getSNR()); 
 			cv.put(KEY_TIME, s.getLocalTime());
-			//db.insert(TABLE_NAME.concat("_SAT"), null, cv);
-			m1Insert.insert(cv);
+			db.insert(TABLE_NAME.concat("_SAT"), null, cv);
+			//m1Insert.insert(cv);
 		}
 		
 		ContentValues cv2 = new ContentValues();  
@@ -162,8 +161,8 @@ public class DBHandler extends SQLiteOpenHelper {
 		cv2.put(KEY_LONGITUDE, l.getLongi());
 		cv2.put(KEY_ALTITUDE, l.getAlti());
 		cv2.put(KEY_TIME, l.getLocalTime());
-		//db.insert(TABLE_NAME.concat("_LOC"), null, cv2);
-		m2Insert.insert(cv2);
+		db.insert(TABLE_NAME.concat("_LOC"), null, cv2);
+		//m2Insert.insert(cv2);
 		
 		db.setTransactionSuccessful();
 		db.endTransaction();

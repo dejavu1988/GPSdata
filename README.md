@@ -4,7 +4,7 @@ Android app for GPS-based co-location experiments.
 
 #Dev
 
-Currently GPSdata supports Android 2.3.6 - 4.0.3 platforms. 
+Currently GPSdata supports Android 2.3.6 - 4.2.2 platforms. 
 
 We try to collect satellite info from NMEA GPGSV sentences,
 and location coordinates from NMEA GPRMC & GPGGA sentences.
