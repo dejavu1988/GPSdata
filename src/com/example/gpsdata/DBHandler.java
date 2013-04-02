@@ -82,8 +82,8 @@ public class DBHandler extends SQLiteOpenHelper {
         onCreate(db);
 	}
 
-	// insert a SatEntry with full info
-	public void addSatEntry(List<SatEntry> sList) {  
+	// insert a SatList with full info
+	public void addSatList(List<SatEntry> sList) {  
 		if(sList.isEmpty()) return;
 		SQLiteDatabase db = this.getWritableDatabase(); 
 		db.beginTransaction();
@@ -110,6 +110,23 @@ public class DBHandler extends SQLiteOpenHelper {
 		//db.close(); 
 	}  
 	
+	// insert a SatEntry with full info
+	public void addSatEntry(SatEntry s) {  
+		
+		SQLiteDatabase db = this.getWritableDatabase(); 
+		
+		ContentValues cv = new ContentValues();			
+		cv.put(KEY_EXPID, MainActivity.experimentId);
+		cv.put(KEY_PRN, s.getPRN());
+		cv.put(KEY_AZIMUTH, s.getAzimuth()); 
+		cv.put(KEY_ELEVATION, s.getElevation());
+		cv.put(KEY_SNR, s.getSNR()); 
+		cv.put(KEY_TIME, s.getLocalTime());
+		db.insert(TABLE_NAME.concat("_SAT"), null, cv);
+		//m1Insert.insert(cv);
+		//db.close(); 
+	}  
+	
 	// insert a LocEntry with full info
 	public void addLocEntry(LocEntry l) {  
 		SQLiteDatabase db = this.getWritableDatabase();  
@@ -125,6 +142,22 @@ public class DBHandler extends SQLiteOpenHelper {
 		//db.close(); 
 	}  
 		
+	// delete entries on experimentId
+    public void fallback() {  
+       SQLiteDatabase db = this.getWritableDatabase();  
+       String where = KEY_EXPID + " = ?";  
+       String[] whereValue ={ MainActivity.experimentId }; 
+       db.beginTransaction();
+       try{
+    	   db.delete(TABLE_NAME.concat("_SAT"), where, whereValue); 
+    	   db.delete(TABLE_NAME.concat("_LOC"), where, whereValue);
+    	   db.setTransactionSuccessful();
+       }finally{
+    	   db.endTransaction();
+       }
+		//db.close();
+    }  
+	
 /*	public void addEntry(List<SatEntry> sList, LocEntry l) {  
 		SQLiteDatabase db = this.getWritableDatabase(); 
 		db.beginTransaction();

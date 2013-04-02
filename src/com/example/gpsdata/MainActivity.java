@@ -23,9 +23,13 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -42,8 +46,9 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	public static Boolean status = false;
 	public static long StartTime = 0;
 	public static long EndTime = 0;
-	public static Boolean isFirstSatOn = false;
-	public static Boolean isFirstLocOn = false;
+	private Boolean isFirstSatOn = false;
+	private Boolean isFirstLocOn = false;
+	private Boolean isGPSOn = true;
 	
 	private Button start;
 	private EditText txtExp;
@@ -73,7 +78,6 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		
 		start = (Button) findViewById(R.id.start);
 		result = (TextView) findViewById(R.id.result);
-		result.setText("IDLE");
 		txtExp = (EditText) findViewById(R.id.name);
 		linearLayout = (LinearLayout)findViewById(R.id.linearLayout);
 		show = (TextView) findViewById(R.id.show);	
@@ -92,22 +96,23 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		
 		
 		//toast = Toast.makeText(getApplicationContext(), new ContextWrapper(this).getDatabasePath("gpsexp.sqlite").getAbsolutePath() ,Toast.LENGTH_LONG);
+		//toast = Toast.makeText(getApplicationContext(), Environment.getExternalStorageDirectory().getPath().concat("/gpsexp.sqlite"),Toast.LENGTH_LONG);
 		//toast.show();
 	    //Log.i("dbpath", new ContextWrapper(this).getDatabasePath("gpsexp.sqlite").getAbsolutePath());
-	    //File ofile = new File(Environment.getExternalStorageDirectory().getPath().concat("//gpsexp.sqlite"));
+	    //File ofile = new File(Environment.getExternalStorageDirectory().getPath().concat("/gpsexp.sqlite"));
 	    //boolean deleted = ofile.delete();
     	//Log.i("db", ofile.getPath() );
     	//toast = Toast.makeText(getApplicationContext(), "true" ,Toast.LENGTH_SHORT);
     	//if (deleted) toast.show();
         
-        timer = new CountDownTimer(300000, 1000) {
+        timer = new CountDownTimer(180000, 1000) {
 
         	public void onTick(long millisUntilFinished) {
         		
         	}
 
             public void onFinish() {
-            	status = false;
+            	status = false; isFirstSatOn = false; isFirstLocOn = false;
             	EndTime = SystemClock.elapsedRealtime();
             	locMgr.removeGpsStatusListener(MainActivity.this);
         		locMgr.removeUpdates(MainActivity.this);
@@ -119,17 +124,15 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
         		show.setText("");
         		txtExp.setText("");
         		linearLayout.removeViews(0, linearLayout.getChildCount());
-        		start.setEnabled(true);
+        		//start.setEnabled(true);
+        		start.setText("Start");
         		
-  		      	LocEntry tmpLocEntry = new LocEntry();
-            	tmpLocEntry.setLocalTime(EndTime);
-  		      	SatEntry tmpSatEntry = new SatEntry();
-  		      	tmpSatEntry.setLocalTime(EndTime);
-  		      	List<SatEntry> tmpList = new ArrayList<SatEntry>();
-                tmpList.add(tmpSatEntry);
+        		currentSatEntry.clear(EndTime);
+			    currentLocEntry.clear(EndTime);
+			    satList.clear();
                 if(db!=null){
-              	  db.addSatEntry(tmpList);
-              	  db.addLocEntry(tmpLocEntry);
+              	  db.addSatEntry(currentSatEntry);
+              	  db.addLocEntry(currentLocEntry);
               	  db.close();
                 }            	
             	
@@ -168,12 +171,12 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	}
 	
 
-	private class AddSatEntryTask extends AsyncTask<List<SatEntry>, Void, Void> {
+	private class AddSatListTask extends AsyncTask<List<SatEntry>, Void, Void> {
         @Override
         protected Void doInBackground(List<SatEntry>... slist) {
         	try {
             	if(db != null && status)
-            		db.addSatEntry(slist[0]);
+            		db.addSatList(slist[0]);
             	
             } catch (Exception e) {
               e.printStackTrace();
@@ -225,19 +228,50 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	protected void onResume() {
 		
 	    super.onResume();
-	    if(status){
+	    /*if(status){
 	    	locMgr.addGpsStatusListener(this);
 			locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, this);
 		    	
-	    }
+	    }*/
+	    result.setText("IDLE");
+		result.setTextColor(Color.BLACK);
+		tl.setText("");
+	    tp.setText("");
+	    show.setText("");	
+	    start.setText("Start");
+	    txtExp.setText("");
+	    linearLayout.removeViews(0, linearLayout.getChildCount());
 	    
+	    if (!(isGPSOn = locMgr.isProviderEnabled(LocationManager.GPS_PROVIDER))) {	
+			// If GPS service is disabled on mobile phone, give an alert dialog
+	    	new AlertDialog.Builder(this).setTitle("GPS service").setMessage("Your GPS localization service is not setup. Try to turn it on?")
+		.setCancelable(false).setPositiveButton("OK", new DialogInterface.OnClickListener()
+		{	// When choosing to turn on GPS, go to setting page
+			public void onClick(DialogInterface dialog, int which)
+			{
+				startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+			}
+		}).setNegativeButton("Cancel", new DialogInterface.OnClickListener()
+		{	// When choose not to open GPS, give a notice of disability
+			public void onClick(DialogInterface dialog, int which)
+			{
+				//Toast.makeText(this, "This application is blocked without GPS service.", Toast.LENGTH_SHORT).show();
+			}
+		}).show();
+	    }
 	}
 	
 	 @Override
 	protected void onPause() {
 		if(status){	
+			status = false; isFirstSatOn = false; isFirstLocOn = false;
 			locMgr.removeGpsStatusListener(this);
 			locMgr.removeUpdates(this);
+			timer.cancel();
+			if(db!=null){
+            	  db.fallback();
+            	  db.close();
+            }
 		}
 		super.onPause();
 	}
@@ -294,29 +328,50 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	
 	class StartListener implements OnClickListener {
 		  public void onClick(View v) {
-			  
-		      status = true;
-		      result.setText("WORKING");
-		      result.setTextColor(Color.GREEN);
-		      tl.setText("Location coordinates:");
-		      tp.setText("Initializing first fix ...");
-		      show.setText("0 satellites in view.");		      
-		      start.setEnabled(false);
-		      experimentId = txtExp.getText().toString(); Log.i("dbID", experimentId);
-		      StartTime = SystemClock.elapsedRealtime();
-		      currentSatEntry.setLocalTime(StartTime);
-		      currentLocEntry.setLocalTime(StartTime);
-		      SatEntry tmpSatEntry = new SatEntry();
-		      tmpSatEntry.set(currentSatEntry);
-              satList.add(tmpSatEntry);
-              if(db!=null){
-            	  db.addSatEntry(satList);
-            	  db.addLocEntry(currentLocEntry);
-              }
-		      locMgr.addGpsStatusListener(MainActivity.this); 
-		      locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, MainActivity.this);
-		      timer.start();
-		      Log.i("start","check");
+			  if(!status){
+				  status = true;
+			      result.setText("WORKING");
+			      result.setTextColor(Color.GREEN);
+			      tl.setText("Location coordinates:");
+			      tp.setText("Initializing first fix ...");
+			      tp.setTextColor(Color.BLUE);
+			      show.setText("0 satellites in view.");		      
+			      //start.setEnabled(false);
+			      start.setText("Cancel");
+			      experimentId = txtExp.getText().toString(); Log.i("dbID", experimentId);
+			      StartTime = SystemClock.elapsedRealtime();
+			      currentSatEntry.clear(StartTime);
+			      currentLocEntry.clear(StartTime);
+			      satList.clear();
+	              //satList.add(currentSatEntry);
+	              if(db!=null){
+	            	  db.addSatEntry(currentSatEntry);
+	            	  db.addLocEntry(currentLocEntry);
+	              }
+			      locMgr.addGpsStatusListener(MainActivity.this); 
+			      locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, MainActivity.this);
+			      timer.start();
+			      Log.i("start","check");
+			  }else{
+				  status = false; isFirstSatOn = false; isFirstLocOn = false;
+				  locMgr.removeGpsStatusListener(MainActivity.this);
+				  locMgr.removeUpdates(MainActivity.this);
+				  timer.cancel();
+				  result.setText("IDLE");
+				  result.setTextColor(Color.BLACK);
+				  tl.setText("");
+			      tp.setText("");
+			      show.setText("");	
+			      start.setText("Start");
+			      txtExp.setText("");
+			      linearLayout.removeViews(0, linearLayout.getChildCount());
+			      
+	              if(db!=null){
+	              	  db.fallback();
+	              	  db.close();
+	              }            	
+			  }
+		      
 		  }
 	}
 	
@@ -356,7 +411,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
              }
             show.setText(count + " satellites in view:");
             
-            new AddSatEntryTask().execute(satList);
+            new AddSatListTask().execute(satList);
             //if(db != null && status) db.addSatEntry(satList);
 		}
 	}
@@ -495,6 +550,13 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	    	return results[0];
 	    }
 	    
+	    public void clear(long t){
+	    	this.localtime = t;
+			this.lati = 0;
+			this.longi = 0;
+			this.alti = 0;
+	    }
+	    
 	   
 	}
 	
@@ -588,6 +650,14 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	    // if equals, return true
 	    public boolean isEqual(SatEntry s){
 	    	return (this.localtime == s.getLocalTime() && this.prn == s.prn);
+	    }
+	    
+	    public void clear(long t){
+	    	this.localtime = t;
+			this.prn = 0;
+			this.azimuth = 0;
+			this.elevation = 0;
+			this.snr = 0;
 	    }
 	}
 	
