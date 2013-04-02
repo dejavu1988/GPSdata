@@ -18,7 +18,7 @@ public class DBHandler extends SQLiteOpenHelper {
 
 	private static final String DATABASE_NAME = "gpsdata.sqlite"; 
 	//private static final String DATABASE_PATH = "/data/data/com.example.gpsdata/databases/";
-    private static final int DATABASE_VERSION = 3;  
+    private static final int DATABASE_VERSION = 1;  
     private static final String TABLE_NAME = "TEST";  
     public static final String KEY_ID = "id";  
     public static final String KEY_EXPID = "expid"; 
@@ -91,7 +91,7 @@ public class DBHandler extends SQLiteOpenHelper {
 			ContentValues cv = new ContentValues();			
 			Iterator<SatEntry> it = sList.iterator();
 			while(it.hasNext()){			
-				SatEntry s = it.next();
+				SatEntry s = (SatEntry) it.next();
 				cv.clear();
 				cv.put(KEY_EXPID, MainActivity.experimentId);
 				cv.put(KEY_PRN, s.getPRN());
@@ -143,7 +143,7 @@ public class DBHandler extends SQLiteOpenHelper {
 		}
 
 		while(it.hasNext()){			
-			SatEntry s = it.next();
+			SatEntry s = (SatEntry) it.next();
 			cv.clear();
 			cv.put(KEY_EXPID, MainActivity.experimentId);
 			cv.put(KEY_PRN, s.getPRN());

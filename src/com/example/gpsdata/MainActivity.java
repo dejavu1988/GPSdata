@@ -25,6 +25,7 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -33,6 +34,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity implements GpsStatus.Listener, LocationListener{
 
@@ -46,7 +48,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	private Button start;
 	private EditText txtExp;
 	private LinearLayout linearLayout;
-	//private Toast toast;
+	private Toast toast;
 	private TextView show, tp, tl, result;
 	private LocationManager locMgr;
 	public static Location seedLocation;
@@ -89,7 +91,8 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		currentLocEntry = new LocEntry(); 
 		
 		
-
+		//toast = Toast.makeText(getApplicationContext(), new ContextWrapper(this).getDatabasePath("gpsexp.sqlite").getAbsolutePath() ,Toast.LENGTH_LONG);
+		//toast.show();
 	    //Log.i("dbpath", new ContextWrapper(this).getDatabasePath("gpsexp.sqlite").getAbsolutePath());
 	    //File ofile = new File(Environment.getExternalStorageDirectory().getPath().concat("//gpsexp.sqlite"));
 	    //boolean deleted = ofile.delete();
@@ -100,9 +103,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
         timer = new CountDownTimer(300000, 1000) {
 
         	public void onTick(long millisUntilFinished) {
-                //Toast toast = new Toast(MainActivity.this);
-                //toast.setText("seconds remaining: " + millisUntilFinished / 1000);
-                //toast.show();
+        		
         	}
 
             public void onFinish() {
@@ -129,8 +130,9 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
                 if(db!=null){
               	  db.addSatEntry(tmpList);
               	  db.addLocEntry(tmpLocEntry);
+              	  db.close();
                 }            	
-            	db.close();
+            	
         		
         		try {
                     File sd = Environment.getExternalStorageDirectory();
@@ -165,13 +167,13 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	
 	}
 	
-		
+
 	private class AddSatEntryTask extends AsyncTask<List<SatEntry>, Void, Void> {
         @Override
-        protected Void doInBackground(List<SatEntry>... sList) {
+        protected Void doInBackground(List<SatEntry>... slist) {
         	try {
             	if(db != null && status)
-            		db.addSatEntry(sList[0]);
+            		db.addSatEntry(slist[0]);
             	
             } catch (Exception e) {
               e.printStackTrace();
@@ -185,7 +187,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
         }
     }
 	
-	private class AddLocEntryTask extends AsyncTask<LocEntry, Void, Void> {
+/*	private class AddLocEntryTask extends AsyncTask<LocEntry, Void, Void> {
 		@Override
 		protected Void doInBackground(LocEntry... loc) {
         	try {
@@ -203,7 +205,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
         	
         }
     }
-	
+*/	
 /*	private class AddEntrysTask extends AsyncTask<Object, Void, Void> {
         @Override
         protected Void doInBackground(Object... params) {
@@ -233,9 +235,10 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 	
 	 @Override
 	protected void onPause() {
-			
-		locMgr.removeGpsStatusListener(this);
-		locMgr.removeUpdates(this);
+		if(status){	
+			locMgr.removeGpsStatusListener(this);
+			locMgr.removeUpdates(this);
+		}
 		super.onPause();
 	}
 	
@@ -303,7 +306,8 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		      StartTime = SystemClock.elapsedRealtime();
 		      currentSatEntry.setLocalTime(StartTime);
 		      currentLocEntry.setLocalTime(StartTime);
-		      SatEntry tmpSatEntry = new SatEntry().set(currentSatEntry);
+		      SatEntry tmpSatEntry = new SatEntry();
+		      tmpSatEntry.set(currentSatEntry);
               satList.add(tmpSatEntry);
               if(db!=null){
             	  db.addSatEntry(satList);
@@ -312,6 +316,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		      locMgr.addGpsStatusListener(MainActivity.this); 
 		      locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, MainActivity.this);
 		      timer.start();
+		      Log.i("start","check");
 		  }
 	}
 	
@@ -339,7 +344,8 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
               GpsSatellite oSat = (GpsSatellite) it.next();              
               currentSatEntry.setSate(oSat);
               
-              SatEntry tmpSatEntry = new SatEntry().set(currentSatEntry);
+              SatEntry tmpSatEntry = new SatEntry();
+              tmpSatEntry.set(currentSatEntry);
               satList.add(tmpSatEntry);
               Log.i("clist", String.valueOf(currentSatEntry.getPRN()));
               TextView tv = new TextView(getApplicationContext());
@@ -349,9 +355,9 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
               linearLayout.addView(tv);
              }
             show.setText(count + " satellites in view:");
-            Log.i("slist", String.valueOf(satList.get(0).getPRN()));
             
             new AddSatEntryTask().execute(satList);
+            //if(db != null && status) db.addSatEntry(satList);
 		}
 	}
 	
@@ -377,7 +383,8 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		tp.setText(s);
     	tp.setTextColor(Color.BLUE);
     	
-    	new AddLocEntryTask().execute(currentLocEntry);
+    	//new AddLocEntryTask().execute(currentLocEntry);
+    	if(db != null && status) db.addLocEntry(currentLocEntry);
 	}
 
 	@Override
@@ -525,13 +532,12 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 		
 		
 			// get assigned from another SatEntry
-		public SatEntry set(SatEntry s) {
+		public void set(SatEntry s) {
 			this.localtime = s.localtime;
 			this.prn = s.prn;
 			this.azimuth = s.azimuth;
 			this.elevation = s.elevation;
 			this.snr = s.snr;
-			return this;
 		}
 		
 		// getting local timestamp
