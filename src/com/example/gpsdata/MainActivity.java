@@ -113,7 +113,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 
             public void onFinish() {
             	status = false; isFirstSatOn = false; isFirstLocOn = false;
-            	EndTime = SystemClock.elapsedRealtime();
+            	EndTime = System.currentTimeMillis();
             	locMgr.removeGpsStatusListener(MainActivity.this);
         		locMgr.removeUpdates(MainActivity.this);
         		
@@ -339,7 +339,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 			      //start.setEnabled(false);
 			      start.setText("Cancel");
 			      experimentId = txtExp.getText().toString(); Log.i("dbID", experimentId);
-			      StartTime = SystemClock.elapsedRealtime();
+			      StartTime = System.currentTimeMillis();
 			      currentSatEntry.clear(StartTime);
 			      currentLocEntry.clear(StartTime);
 			      satList.clear();
@@ -391,7 +391,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
             Iterator<GpsSatellite> it = iSatellites.iterator();
             linearLayout.removeViews(0, linearLayout.getChildCount());
             
-            currentSatEntry.setLocalTime(SystemClock.elapsedRealtime());
+            currentSatEntry.setLocalTime(System.currentTimeMillis());
             satList.clear();
             int count=0;
             while(it.hasNext()){
@@ -426,7 +426,7 @@ public class MainActivity extends Activity implements GpsStatus.Listener, Locati
 			return;
 		}
 		if(!isFirstLocOn) isFirstLocOn = true;
-		currentLocEntry.setLocalTime(SystemClock.elapsedRealtime()); // update current timestamp
+		currentLocEntry.setLocalTime(System.currentTimeMillis()); // update current timestamp
 		currentLocEntry.setLoca(location);
 		
 		Log.d("loca", currentLocEntry.toString());

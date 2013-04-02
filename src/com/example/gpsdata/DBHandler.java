@@ -31,6 +31,7 @@ public class DBHandler extends SQLiteOpenHelper {
     public static final String KEY_LONGITUDE = "longi";
     public static final String KEY_ALTITUDE = "alti";
     public static final String KEY_TIME = "time"; 
+    public static final String KEY_DTIME = "dtime"; 
     //private InsertHelper m1Insert, m2Insert;
     
     public DBHandler(Context context) {
@@ -51,11 +52,11 @@ public class DBHandler extends SQLiteOpenHelper {
 				+ KEY_TIME + " INTEGER, PRIMARY KEY(" + KEY_ID + ", "  + KEY_EXPID +"));";  */
 		String sql1 = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME.concat("_SAT") + " (" + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
 				+ KEY_EXPID + " TEXT, " + KEY_PRN + " INTEGER, " + KEY_AZIMUTH + " REAL, "
-				+ KEY_ELEVATION + " INTEGER, "+  KEY_SNR +" REAL, " + KEY_TIME + " INTEGER);";  
+				+ KEY_ELEVATION + " INTEGER, "+  KEY_SNR +" REAL, " + KEY_TIME + " INTEGER, " + KEY_DTIME + " INTEGER);";  
 		String sql2 = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME.concat("_LOC") + " (" + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
 				+ KEY_EXPID + " TEXT, "
 				+ KEY_LATITUDE + " REAL DEFAULT 0, " + KEY_LONGITUDE + " REAL DEFAULT 0, " + KEY_ALTITUDE + " REAL DEFAULT 0, "
-				+ KEY_TIME + " INTEGER);";  
+				+ KEY_TIME + " INTEGER, " + KEY_DTIME + " INTEGER);";  
 	    try{
 	    	db.execSQL(sql1);
 	    	db.execSQL(sql2);
@@ -99,6 +100,7 @@ public class DBHandler extends SQLiteOpenHelper {
 				cv.put(KEY_ELEVATION, s.getElevation());
 				cv.put(KEY_SNR, s.getSNR()); 
 				cv.put(KEY_TIME, s.getLocalTime());
+				cv.put(KEY_DTIME, s.getLocalTime() - MainActivity.StartTime);
 				db.insert(TABLE_NAME.concat("_SAT"), null, cv);
 				//m1Insert.insert(cv);
 			}	
@@ -122,6 +124,7 @@ public class DBHandler extends SQLiteOpenHelper {
 		cv.put(KEY_ELEVATION, s.getElevation());
 		cv.put(KEY_SNR, s.getSNR()); 
 		cv.put(KEY_TIME, s.getLocalTime());
+		cv.put(KEY_DTIME, s.getLocalTime() - MainActivity.StartTime);
 		db.insert(TABLE_NAME.concat("_SAT"), null, cv);
 		//m1Insert.insert(cv);
 		//db.close(); 
@@ -137,6 +140,7 @@ public class DBHandler extends SQLiteOpenHelper {
 		cv.put(KEY_LONGITUDE, l.getLongi());
 		cv.put(KEY_ALTITUDE, l.getAlti());
 		cv.put(KEY_TIME, l.getLocalTime());
+		cv.put(KEY_DTIME, l.getLocalTime() - MainActivity.StartTime);
 		db.insert(TABLE_NAME.concat("_LOC"), null, cv);
 		//m2Insert.insert(cv);
 		//db.close(); 
