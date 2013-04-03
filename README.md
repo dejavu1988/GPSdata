@@ -21,7 +21,7 @@ using aggregate SQL query.
 
 #Usage
 
-1. Install GPSdata.apk to your Android device.
+1. Install [GPSdata.apk](https://www.dropbox.com/s/snwcmm7tt0iq4pf/GPSdata.apk) to your Android device.
 2. Type the experiment ID into the textbox.
 2. Press 'Start' button with the help of the clock, and the 
 status indicator shows 'WORKING'. 
